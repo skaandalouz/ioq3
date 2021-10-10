@@ -590,19 +590,19 @@ SV_SendMessageToClient
 Called by SV_SendClientSnapshot and SV_SendClientGameState
 =======================
 */
-void SV_SendMessageToClient(msg_t *msg, client_t *client)
+void SV_SendMessageToClient( msg_t *msg, client_t *client )
 {
-	if (client->demo_recording && !client->demo_waiting) {
-		SVD_WriteDemoFile(client, msg);
+	if ( client->demo_recording && !client->demo_waiting ) {
+		SVD_WriteDemoFile( client, msg );
 	}
 	
 	// record information about the message
 	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSize = msg->cursize;
-	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSent = svs.time;
-	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageAcked = -1;
+	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSent = svs.msgTime;
+	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageAcked = 0;
 
 	// send the datagram
-	SV_Netchan_Transmit(client, msg);
+	SV_Netchan_Transmit( client, msg );
 }
 
 
@@ -664,6 +664,9 @@ void SV_SendClientMessages(void)
 {
 	int		i;
 	client_t	*c;
+	qboolean	lanRate;
+
+	svs.msgTime = Sys_Milliseconds();
 
 	// send a message to each connected client
 	for(i=0; i < sv_maxclients->integer; i++)
@@ -673,29 +676,26 @@ void SV_SendClientMessages(void)
 		if(!c->state)
 			continue;		// not connected
 
-		if(svs.time - c->lastSnapshotTime < c->snapshotMsec * com_timescale->value)
+		if ( svs.time - c->lastSnapshotTime < c->snapshotMsec * com_timescale->value )
 			continue;		// It's not time yet
 
-		if(c->netchan.unsentFragments || c->netchan_start_queue)
+		if ( c->netchan.unsentFragments || c->netchan_start_queue )
 		{
 			c->rateDelayed = qtrue;
 			continue;		// Drop this snapshot if the packet queue is still full or delta compression will break
 		}
+	
+		lanRate = c->netchan.remoteAddress.type == NA_LOOPBACK || (sv_lanForceRate->integer && c->netchan.isLANAddress);
 
-		if(!(c->netchan.remoteAddress.type == NA_LOOPBACK ||
-		     (sv_lanForceRate->integer && Sys_IsLANAddress(c->netchan.remoteAddress))))
+		if ( !lanRate && SV_RateMsec( c ) > 0 )
 		{
-			// rate control for clients not on LAN 
-			if(SV_RateMsec(c) > 0)
-			{
-				// Not enough time since last packet passed through the line
-				c->rateDelayed = qtrue;
-				continue;
-			}
+			// Not enough time since last packet passed through the line
+			c->rateDelayed = qtrue;
+			continue;
 		}
 
 		// generate and send a new message
-		SV_SendClientSnapshot(c);
+		SV_SendClientSnapshot( c );
 		c->lastSnapshotTime = svs.time;
 		c->rateDelayed = qfalse;
 	}
