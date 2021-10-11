@@ -685,7 +685,7 @@ void SV_SendClientMessages(void)
 			continue;		// Drop this snapshot if the packet queue is still full or delta compression will break
 		}
 	
-		lanRate = c->netchan.remoteAddress.type == NA_LOOPBACK || (sv_lanForceRate->integer && c->netchan.isLANAddress);
+		lanRate = c->netchan.remoteAddress.type == NA_LOOPBACK || (sv_lanForceRate->integer && Sys_IsLANAddress(c->netchan.remoteAddress));
 
 		if ( !lanRate && SV_RateMsec( c ) > 0 )
 		{
