@@ -199,16 +199,16 @@ Save the console contents out to a file
 */
 void Con_Dump_f (void)
 {
-	int		l, x, i;
+	int		l, x, i, n;
 	short	*line;
 	fileHandle_t	f;
 	int		bufferlen;
 	char	*buffer;
-	char	filename[MAX_QPATH];
+	char	filename[ MAX_QPATH ];
 
 	if (Cmd_Argc() != 2)
 	{
-		Com_Printf ("usage: condump <filename>\n");
+		Com_Printf( "Dump the active console tab.\nUsage: condump <filename>\n" );
 		return;
 	}
 
@@ -230,36 +230,36 @@ void Con_Dump_f (void)
 
 	Com_Printf ("Dumped console text to %s.\n", filename );
 
-	// skip empty lines
-	for (l = mainCon->current - mainCon->totallines + 1 ; l <= mainCon->current ; l++)
-	{
-		line = mainCon->text + (l%mainCon->totallines)*mainCon->linewidth;
-		for (x=0 ; x<consoles[CONSOLE_ALL].linewidth ; x++)
-			if ((line[x] & 0xff) != ' ')
-				break;
-		if (x != mainCon->linewidth)
-			break;
+	if (currentCon->current >= currentCon->totallines ) {
+		n = currentCon->totallines;
+		l = currentCon->current + 1;
+	} else {
+		n = currentCon->current + 1;
+		l = 0;
 	}
 
 #ifdef _WIN32
-	bufferlen = mainCon->linewidth + 3 * sizeof ( char );
+	bufferlen = currentCon->linewidth + 3 * sizeof ( char );
 #else
-	bufferlen = mainCon->linewidth + 2 * sizeof ( char );
+	bufferlen = currentCon->linewidth + 2 * sizeof ( char );
 #endif
 
 	buffer = Hunk_AllocateTempMemory( bufferlen );
 
 	// write the remaining lines
-	buffer[bufferlen-1] = 0;
-	for ( ; l <= mainCon->current ; l++)
+	buffer[ bufferlen - 1 ] = '\0';
+
+	for ( i = 0; i < n ; i++, l++ ) 
 	{
-		line = mainCon->text + (l%mainCon->totallines)*mainCon->linewidth;
-		for(i=0; i<mainCon->linewidth; i++)
-			buffer[i] = line[i] & 0xff;
-		for (x=mainCon->linewidth-1 ; x>=0 ; x--)
-		{
-			if (buffer[x] == ' ')
-				buffer[x] = 0;
+		line = currentCon->text + (l % currentCon->totallines) * currentCon->linewidth;
+		// store line
+		for( x = 0; x < currentCon->linewidth; x++ )
+			buffer[ x ] = line[ x ] & 0xff;
+		buffer[ currentCon->linewidth ] = '\0';
+		// terminate on ending space characters
+		for ( x = currentCon->linewidth - 1 ; x >= 0 ; x-- ) {
+			if ( buffer[ x ] == ' ' )
+				buffer[ x ] = '\0';
 			else
 				break;
 		}
