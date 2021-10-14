@@ -662,22 +662,17 @@ SV_SendClientMessages
 */
 void SV_SendClientMessages(void)
 {
-	int		i;
+	int			i;
 	client_t	*c;
 	qboolean	lanRate;
 
-	svs.msgTime = Sys_Milliseconds();
-
 	// send a message to each connected client
-	for(i=0; i < sv_maxclients->integer; i++)
+	for( i = 0; i < sv_maxclients->integer; i++ )
 	{
-		c = &svs.clients[i];
+		c = &svs.clients[ i ];
 		
-		if(!c->state)
+		if ( c->state == CS_FREE )
 			continue;		// not connected
-
-		if ( svs.time - c->lastSnapshotTime < c->snapshotMsec * com_timescale->value )
-			continue;		// It's not time yet
 
 		if ( c->netchan.unsentFragments || c->netchan_start_queue )
 		{
@@ -685,7 +680,16 @@ void SV_SendClientMessages(void)
 			continue;		// Drop this snapshot if the packet queue is still full or delta compression will break
 		}
 	
-		lanRate = c->netchan.remoteAddress.type == NA_LOOPBACK || (sv_lanForceRate->integer && Sys_IsLANAddress(c->netchan.remoteAddress));
+		// 1. Local clients get snapshots every server frame
+		// 2. Remote clients get snapshots depending on rate and requested number of updates
+
+		if ( svs.time - c->lastSnapshotTime < c->snapshotMsec * com_timescale->value ) 
+		{
+			continue;		// not time yet
+		}
+
+		lanRate = (c->netchan.remoteAddress.type == NA_LOOPBACK ||
+			(sv_lanForceRate->integer && Sys_IsLANAddress(c->netchan.remoteAddress)));
 
 		if ( !lanRate && SV_RateMsec( c ) > 0 )
 		{
