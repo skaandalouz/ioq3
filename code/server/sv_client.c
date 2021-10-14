@@ -1044,6 +1044,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 	char	*ip;
 	int		i;
 	int	len;
+	const int maxRate = 100000;
 
 	// name for C code
 	Q_strncpyz( cl->name, Info_ValueForKey (cl->userinfo, "name"), sizeof(cl->name) );
@@ -1053,7 +1054,7 @@ void SV_UserinfoChanged( client_t *cl ) {
 	// if the client is on the same subnet as the server and we aren't running an
 	// internet public server, assume they don't need a rate choke
 	if ( Sys_IsLANAddress( cl->netchan.remoteAddress ) && com_dedicated->integer != 2 && sv_lanForceRate->integer == 1) {
-		cl->rate = 99999;	// lans should not rate limit
+		cl->rate = maxRate;	// lans should not rate limit
 	} else {
 		val = Info_ValueForKey (cl->userinfo, "rate");
 		if (strlen(val)) {
@@ -1061,11 +1062,11 @@ void SV_UserinfoChanged( client_t *cl ) {
 			cl->rate = i;
 			if (cl->rate < 1000) {
 				cl->rate = 1000;
-			} else if (cl->rate > 90000) {
-				cl->rate = 90000;
+			} else if (cl->rate > maxRate) {
+				cl->rate = maxRate;
 			}
 		} else {
-			cl->rate = 3000;
+			cl->rate = 5000; // was 3000
 		}
 	}
 	val = Info_ValueForKey (cl->userinfo, "handicap");
@@ -1077,23 +1078,21 @@ void SV_UserinfoChanged( client_t *cl ) {
 	}
 
 	// snaps command
-	val = Info_ValueForKey (cl->userinfo, "snaps");
-	
-	if(strlen(val))
-	{
-		i = atoi(val);
-		
-		if(i < 1)
-			i = 1;
-		else if(i > sv_fps->integer)
-			i = sv_fps->integer;
-
-		i = 1000 / i;
-	}
+	val = Info_ValueForKey( cl->userinfo, "snaps" );
+	if ( val[0] )
+		i = atoi( val );
 	else
-		i = 50;
+		i = sv_fps->integer; // was 20, hardcoded
 
-	if(i != cl->snapshotMsec)
+	// range check
+	if ( i < 1 )
+		i = 1;
+	else if ( i > sv_fps->integer )
+		i = sv_fps->integer;
+
+	i = 1000 / i; // from FPS to milliseconds
+	
+	if ( i != cl->snapshotMsec )
 	{
 		// Reset last sent snapshot so we avoid desync between server frame time and snapshot send time
 		cl->lastSnapshotTime = 0;
