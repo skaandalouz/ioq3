@@ -34,7 +34,7 @@ jobs:
       - name: setup
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -yy mingw-w64 libgl1-mesa-dev libsdl2-dev libfreetype6-dev libxxf86vm-dev
+          sudo apt-get update; sudo apt install -yy mingw-w64 libgl1-mesa-dev libsdl2-dev libfreetype6-dev libxxf86vm-dev
 
       - name: build
         run: |
