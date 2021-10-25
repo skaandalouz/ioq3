@@ -367,8 +367,8 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 		}
 		// entities can be flagged to be sent to a given mask of clients
 		if ( ent->r.svFlags & SVF_CLIENTMASK ) {
-			if (frame->ps.clientNum >= 64)
-				Com_Error( ERR_DROP, "SVF_CLIENTMASK: clientNum >= 64" );
+			if (frame->ps.clientNum >= 36)
+				Com_Error( ERR_DROP, "SVF_CLIENTMASK: clientNum >= 36" );
 			if (~ent->r.singleClient & (1 << frame->ps.clientNum))
 				continue;
 		}
@@ -665,6 +665,8 @@ void SV_SendClientMessages(void)
 	int			i;
 	client_t	*c;
 	qboolean	lanRate;
+	
+	svs.msgTime = Sys_Milliseconds();
 
 	// send a message to each connected client
 	for( i = 0; i < sv_maxclients->integer; i++ )
