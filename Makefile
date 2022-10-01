@@ -298,7 +298,7 @@ ifeq ($(SDL_CFLAGS),)
 endif
 
 # Add git version info
-USE_GIT=
+USE_GIT=1
 ifeq ($(wildcard .git),.git)
   GIT_REV=$(shell git describe --always)
   ifneq ($(GIT_REV),)
